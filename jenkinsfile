@@ -1,36 +1,33 @@
 pipeline{
     agent any
     tools {
-        maven '3.8.6' 
+        maven 'Maven' 
     }
-    stages{
-        stage("Test"){
+        stages{
+        stage("code test"){
             steps{
-                // mvn test
+                checkout([$class: 'SubversionSCM', additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[cancelProcessOnExternalsFail: true, credentialsId: 'SVN', depthOption: 'infinity', ignoreExternalsOption: true, local: '.', remote: 'http://192.168.146.142/svn/srk/sohel/e-proc-suite(V 2.0)']], quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
                 sh "mvn test"
-             }
-          }
-          stage("Build"){
+            }
+            }
+            stage("Build"){
             steps{
                 sh "mvn package"
-             }
-          }
-          stage("Deploy to Test"){
+            }
+            }
+            stage("Deploy on test"){
             steps{
-                // deploy on container -> plugin
-                deploy adapters: [tomcat9(credentialsId: 'Tomcat', path: '', url: 'http://192.168.146.141:8080/')], contextPath: 'ROOT', onFailure: false, war: '**/ROOT.war'
-             }
-          }
-          stage("File Trasfer"){
-            steps{
-                echo "========executing A========"
-             }
-          }
-          stage("Deploy to Prod"){
+                deploy adapters: [tomcat9(credentialsId: 'Tomcat', path: '', url: 'http://192.168.146.143:8080/')], contextPath: 'ROOT', onFailure: false, war: '**/ROOT.war'
+            parameters {
+            file 'application.properties'
+            }
+            }
+            }
+            stage("Deploy on prod"){
             steps{
                 echo "========executing A========"
-             }
-          }
+            }
+            }
         }
     
     post{
