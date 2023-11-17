@@ -6,7 +6,7 @@ pipeline{
         stages{
         stage("code test"){
             steps{
-                checkout([$class: 'SubversionSCM', additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[cancelProcessOnExternalsFail: true, credentialsId: 'SVN', depthOption: 'infinity', ignoreExternalsOption: true, local: '.', remote: 'http://192.168.146.142/svn/srk/sohel/e-proc-suite(V 2.0)']], quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
+                checkout([$class: 'SubversionSCM', additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', locations: [[cancelProcessOnExternalsFail: true, credentialsId: 'SVN', depthOption: 'infinity', ignoreExternalsOption: true, local: '.', remote: 'http://192.168.146.144/svn/srk/sohel/e-proc-suite(V 2.0)']], quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
                 sh "mvn test"
             }
             }
@@ -17,15 +17,28 @@ pipeline{
             }
             stage("Deploy on test"){
             steps{
-                deploy adapters: [tomcat9(credentialsId: 'Tomcat', path: '', url: 'http://192.168.146.143:8080/')], contextPath: 'ROOT', onFailure: false, war: '**/ROOT.war'
-            parameters {
-            file 'application.properties'
-            }
+            deploy adapters: [tomcat9(credentialsId: 'Tomcat', path: '', url: 'http://192.168.146.145:8080/')], contextPath: 'ROOT', onFailure: false, war: '**/ROOT.war'
+            sleep 10
+            sshPublisher(publishers: [sshPublisherDesc(configName: 'testtom', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '/ROOT/WEB-INF/classes', remoteDirectorySDF: false, removePrefix: '', sourceFiles: 'application.properties')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+            sleep 5
+            sshPublisher(publishers: [sshPublisherDesc(configName: 'testtom', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '/ROOT/WEB-INF/lib', remoteDirectorySDF: false, removePrefix: '', sourceFiles: 'email-util-1.0.jar')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+            sleep 5
+            sshPublisher(publishers: [sshPublisherDesc(configName: 'testtom', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: 'sudo systemctl restart tomcat', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '', remoteDirectorySDF: false, removePrefix: '', sourceFiles: '')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
             }
             }
             stage("Deploy on prod"){
+                input {
+            message 'should we continue with prod'
+            ok 'yes'
+            }
             steps{
-                echo "========executing A========"
+                deploy adapters: [tomcat9(credentialsId: 'Tomcat', path: '', url: 'http://192.168.146.138:8080')], contextPath: 'ROOT', war: '**/ROOT.war'
+                sleep 10
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'Livetom', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: 'ROOT/WEB-INF/classes', remoteDirectorySDF: false, removePrefix: 'file', sourceFiles: 'file/application.properties')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+                sleep 5
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'Livetom', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: 'ROOT/WEB-INF/lib', remoteDirectorySDF: false, removePrefix: 'file', sourceFiles: 'file/email-util-1.0.jar')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+                sleep 5
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'Livetom', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: 'sudo systemctl restart tomcat', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '', remoteDirectorySDF: false, removePrefix: '', sourceFiles: '')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
             }
             }
         }
